@@ -6,6 +6,7 @@ from docx.shared import Inches, Pt
 from PIL import Image
 import base64
 import io
+from html2docx import html2docx  # ✅ new import
 
 app = FastAPI()
 
@@ -52,13 +53,13 @@ async def merge_docx(request: Request):
     header_para.alignment = 1
     header_para.add_run().add_picture(header_stream, width=Inches(6.5))
 
-    # Footer Text
-    footer_para = section.footer.paragraphs[0]
-    footer_para.alignment = 1
-    footer_para.text = footer_text
-    footer_para.style.font.size = Pt(9)
+    # Footer HTML content with formatting
+    footer_doc = Document()
+    html2docx(footer_text, footer_doc)
+    for element in footer_doc.element.body:
+        section.footer._element.body.append(element)
 
-    # Body Content
+    # Body Content (plain text)
     for line in content.split("\n"):
         if line.strip():
             para = doc.add_paragraph(line.strip())

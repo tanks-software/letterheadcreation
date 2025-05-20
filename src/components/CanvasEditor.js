@@ -1,8 +1,10 @@
-// UpgradedLetterheadEditor.jsx
+// CanvasEditor.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Canvas, Image as FabricImage } from 'fabric';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
-const UpgradedLetterheadEditor = () => {
+const CanvasEditor = () => {
   const canvasRef = useRef(null);
   const canvasElementRef = useRef(null);
   const [bodyText, setBodyText] = useState("");
@@ -90,12 +92,13 @@ const UpgradedLetterheadEditor = () => {
 
             <div>
               <label className="block mb-2 font-medium text-gray-700">Footer Content</label>
-              <textarea
+              <ReactQuill
+                theme="snow"
                 value={footerText}
-                onChange={(e) => setFooterText(e.target.value)}
-                rows={3}
-                placeholder="e.g. Company Name | Address | Website | Phone"
-                className="w-full border border-gray-300 rounded p-4 text-sm focus:outline-none focus:ring focus:border-blue-400"
+                onChange={setFooterText}
+                placeholder="Paste styled footer here..."
+                className="bg-white rounded"
+                style={{ height: '150px', marginBottom: '1rem' }}
               />
             </div>
 
@@ -120,4 +123,4 @@ const UpgradedLetterheadEditor = () => {
   );
 };
 
-export default UpgradedLetterheadEditor;
+export default CanvasEditor;
