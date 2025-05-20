@@ -91,16 +91,14 @@ const CanvasEditor = () => {
             </div>
 
             <div>
-              <label className="block mb-2 font-medium text-gray-700">Footer Content</label>
-              <ReactQuill
-                theme="snow"
-                value={footerText}
-                onChange={setFooterText}
-                placeholder="Paste styled footer here..."
-                className="bg-white rounded"
-                style={{ height: '150px', marginBottom: '1rem' }}
-              />
+            <label className="block mb-2 font-medium text-gray-700">Footer Preview</label>
+            <div
+            className="p-4 border border-gray-300 rounded bg-white"
+            style={{ minHeight: '100px' }}
+            dangerouslySetInnerHTML={{ __html: footerText }}
+            />
             </div>
+
 
             <button
               onClick={exportWithContent}
