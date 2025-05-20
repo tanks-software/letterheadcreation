@@ -40,7 +40,7 @@ const UpgradedLetterheadEditor = () => {
     const canvas = canvasRef.current;
     const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2 });
     try {
-      const response = await fetch("http://127.0.0.1:8000/merge-docx/", {
+      const response = await fetch("https://letterhead-backend.onrender.com/merge-docx/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
