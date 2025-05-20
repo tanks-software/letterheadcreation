@@ -21,12 +21,10 @@ app.add_middleware(
 def split_letterhead_image(image_bytes):
     image = Image.open(io.BytesIO(image_bytes))
     width, height = image.size
-
     header_img = image.crop((0, 0, width, int(height * 0.25)))
     header_io = io.BytesIO()
     header_img.save(header_io, format="PNG")
     header_io.seek(0)
-
     return header_io
 
 @app.post("/merge-docx/")
@@ -34,7 +32,7 @@ async def merge_docx(request: Request):
     data = await request.json()
     base64_data = data["image"].split(";base64,")[-1]
     content = data["content"]
-    footer_text = data.get("footer_text", "")
+    footer_html = data.get("footer_text", "")
 
     image_bytes = base64.b64decode(base64_data)
     header_stream = split_letterhead_image(image_bytes)
@@ -48,20 +46,21 @@ async def merge_docx(request: Request):
     section.left_margin = Inches(1)
     section.right_margin = Inches(1)
 
-    # Header Image
+    # Add header image
     header_para = section.header.paragraphs[0]
     header_para.alignment = 1
     header_para.add_run().add_picture(header_stream, width=Inches(6.5))
 
-    # ✅ Styled Footer (HTML support)
-    if footer_text.strip():
-        # Parse into a temporary document
-        temp_doc = Document()
-        html2docx(f"<html><body>{footer_text}</body></html>", temp_doc)
+    # Add styled HTML footer via html2docx
+    if footer_html.strip():
+        # Write HTML into a temporary doc
+        footer_doc = Document()
+        html2docx(f"<html><body>{footer_html}</body></html>", footer_doc)
 
-        # Copy the styled runs to the actual footer
-        for temp_para in temp_doc.paragraphs:
-            para = section.footer.add_paragraph()
+        # Add a new paragraph to the real footer
+        footer_section = section.footer
+        for temp_para in footer_doc.paragraphs:
+            para = footer_section.add_paragraph()
             for run in temp_para.runs:
                 new_run = para.add_run(run.text)
                 new_run.bold = run.bold
@@ -70,12 +69,13 @@ async def merge_docx(request: Request):
                 new_run.font.size = run.font.size
                 new_run.font.color.rgb = run.font.color.rgb
 
-    # Body Content
+    # Add main body content
     for line in content.split("\n"):
         if line.strip():
             para = doc.add_paragraph(line.strip())
             para.style.font.size = Pt(11)
 
+    # Return final DOCX
     output = io.BytesIO()
     doc.save(output)
     output.seek(0)
