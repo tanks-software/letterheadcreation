@@ -65,7 +65,7 @@ async def merge_docx(request: Request):
     # Styled footer (HTML)
     if footer_text.strip():
         footer_doc = Document()
-        html2docx(footer_text, footer_doc)
+        html2docx(f"<html><body>{footer_text}</body></html>", footer_doc)
 
         for p in footer_doc.paragraphs:
             new_para = section.footer.add_paragraph()
