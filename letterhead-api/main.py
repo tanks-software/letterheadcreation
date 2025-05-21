@@ -6,11 +6,12 @@ from docx.shared import Inches, Pt
 from PIL import Image
 import base64
 import io
-from html2docx import html2docx
+import os
+from html2image import Html2Image
 
 app = FastAPI()
 
-# ✅ Allow your deployed frontend only
+# ✅ CORS for Vercel frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://letterheadcreation.vercel.app"],
@@ -18,6 +19,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ Ensure temp folder exists
+TEMP_FOLDER = "temp_images"
+os.makedirs(TEMP_FOLDER, exist_ok=True)
+
+hti = Html2Image(executable_path="/usr/bin/wkhtmltoimage", output_path=TEMP_FOLDER)
 
 def split_letterhead_image(image_bytes):
     image = Image.open(io.BytesIO(image_bytes))
@@ -48,32 +55,26 @@ async def merge_docx(request: Request):
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
 
-        # ✅ Add header image
+        # ✅ Header
         header_para = section.header.paragraphs[0]
         header_para.alignment = 1
         header_para.add_run().add_picture(header_stream, width=Inches(6.5))
 
-        # ✅ Add rich footer from HTML
+        # ✅ Footer: convert HTML to image then embed
         if footer_html.strip():
-            temp_doc = Document()
-            html2docx(f"<html><body>{footer_html}</body></html>", temp_doc)
+            footer_file = "footer_preview.png"
+            hti.screenshot(
+                html_str=f"<div style='font-family:Arial; font-size:12pt;'>{footer_html}</div>",
+                save_as=footer_file,
+                size=(800, 100)
+            )
 
-            # Remove leading empty para if needed
-            if temp_doc.paragraphs and not temp_doc.paragraphs[0].text.strip():
-                temp_doc._body.clear_content()
+            footer_path = os.path.join(TEMP_FOLDER, footer_file)
+            if os.path.exists(footer_path):
+                with open(footer_path, "rb") as f:
+                    section.footer.paragraphs[0].add_run().add_picture(f, width=Inches(6.5))
 
-            for para in temp_doc.paragraphs:
-                footer_para = section.footer.add_paragraph()
-                for run in para.runs:
-                    new_run = footer_para.add_run(run.text)
-                    new_run.bold = run.bold
-                    new_run.italic = run.italic
-                    new_run.underline = run.underline
-                    new_run.font.size = run.font.size
-                    if run.font.color and run.font.color.rgb:
-                        new_run.font.color.rgb = run.font.color.rgb
-
-        # ✅ Add main letter content
+        # ✅ Body
         for line in content.split("\n"):
             if line.strip():
                 para = doc.add_paragraph(line.strip())
