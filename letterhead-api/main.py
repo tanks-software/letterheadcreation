@@ -8,7 +8,8 @@ from docx.shared import Inches, Pt
 from PIL import Image
 import base64
 import io
-from html2docx import Html2Docx
+from html2docx import html2docx  # ✅ lowercase function
+
 
 app = FastAPI()
 
