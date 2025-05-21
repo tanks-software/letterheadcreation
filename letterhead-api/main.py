@@ -24,7 +24,9 @@ app.add_middleware(
 TEMP_FOLDER = "temp_images"
 os.makedirs(TEMP_FOLDER, exist_ok=True)
 
-hti = Html2Image(executable_path="/usr/bin/wkhtmltoimage", output_path=TEMP_FOLDER)
+hti = Html2Image()
+hti.browser_path = '/usr/bin/wkhtmltoimage'
+
 
 def split_letterhead_image(image_bytes):
     image = Image.open(io.BytesIO(image_bytes))
