@@ -7,11 +7,11 @@ from PIL import Image
 import base64
 import io
 import os
-from html2image import Html2Image
+import subprocess
 
 app = FastAPI()
 
-# ✅ CORS for Vercel frontend
+# ✅ Allow frontend origin from Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://letterheadcreation.vercel.app"],
@@ -24,10 +24,7 @@ app.add_middleware(
 TEMP_FOLDER = "temp_images"
 os.makedirs(TEMP_FOLDER, exist_ok=True)
 
-hti = Html2Image()
-hti.browser_path = '/usr/bin/wkhtmltoimage'
-
-
+# ✅ Split header image
 def split_letterhead_image(image_bytes):
     image = Image.open(io.BytesIO(image_bytes))
     width, height = image.size
@@ -36,6 +33,20 @@ def split_letterhead_image(image_bytes):
     header_img.save(header_io, format="PNG")
     header_io.seek(0)
     return header_io
+
+# ✅ Convert HTML to image using wkhtmltoimage
+def render_footer_html_to_image(html_string, output_path):
+    html_file = os.path.join(TEMP_FOLDER, "footer_temp.html")
+    with open(html_file, "w", encoding="utf-8") as f:
+        f.write(f"<html><body><div style='font-family:Arial; font-size:12pt;'>{html_string}</div></body></html>")
+
+    try:
+        subprocess.run(
+            ["wkhtmltoimage", "--width", "800", "--height", "100", html_file, output_path],
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print("❌ wkhtmltoimage error:", e)
 
 @app.post("/merge-docx/")
 async def merge_docx(request: Request):
@@ -57,31 +68,27 @@ async def merge_docx(request: Request):
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
 
-        # ✅ Header
+        # ✅ Add header
         header_para = section.header.paragraphs[0]
         header_para.alignment = 1
         header_para.add_run().add_picture(header_stream, width=Inches(6.5))
 
-        # ✅ Footer: convert HTML to image then embed
+        # ✅ Render and add footer image
         if footer_html.strip():
-            footer_file = "footer_preview.png"
-            hti.screenshot(
-                html_str=f"<div style='font-family:Arial; font-size:12pt;'>{footer_html}</div>",
-                save_as=footer_file,
-                size=(800, 100)
-            )
+            footer_img_path = os.path.join(TEMP_FOLDER, "footer_rendered.png")
+            render_footer_html_to_image(footer_html, footer_img_path)
 
-            footer_path = os.path.join(TEMP_FOLDER, footer_file)
-            if os.path.exists(footer_path):
-                with open(footer_path, "rb") as f:
+            if os.path.exists(footer_img_path):
+                with open(footer_img_path, "rb") as f:
                     section.footer.paragraphs[0].add_run().add_picture(f, width=Inches(6.5))
 
-        # ✅ Body
+        # ✅ Add body
         for line in content.split("\n"):
             if line.strip():
                 para = doc.add_paragraph(line.strip())
                 para.style.font.size = Pt(11)
 
+        # ✅ Return document
         output = io.BytesIO()
         doc.save(output)
         output.seek(0)
