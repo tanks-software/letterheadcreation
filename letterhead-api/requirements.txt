@@ -4,3 +4,4 @@ pillow
 python-docx
 python-multipart
 html2docx
+html2image
