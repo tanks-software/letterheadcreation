@@ -1,5 +1,3 @@
-# ✅ main.py (FastAPI backend)
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -8,12 +6,11 @@ from docx.shared import Inches, Pt
 from PIL import Image
 import base64
 import io
-from html2docx import html2docx  # ✅ lowercase function
-
+from html2docx import html2docx
 
 app = FastAPI()
 
-# ✅ Allow only your deployed frontend to call this API
+# ✅ Allow your deployed frontend only
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://letterheadcreation.vercel.app"],
@@ -56,27 +53,25 @@ async def merge_docx(request: Request):
         header_para.alignment = 1
         header_para.add_run().add_picture(header_stream, width=Inches(6.5))
 
-        # ✅ Parse and apply footer
+        # ✅ Add rich footer from HTML
         if footer_html.strip():
-            try:
-                parser = html2docx()
-                parser.feed(f"<html><body>{footer_html}</body></html>")
-                parser.close()
+            temp_doc = Document()
+            html2docx(f"<html><body>{footer_html}</body></html>", temp_doc)
 
-                footer_doc = parser.doc
+            # Remove leading empty para if needed
+            if temp_doc.paragraphs and not temp_doc.paragraphs[0].text.strip():
+                temp_doc._body.clear_content()
 
-                for temp_para in footer_doc.paragraphs:
-                    para = section.footer.add_paragraph()
-                    for run in temp_para.runs:
-                        r = para.add_run(run.text)
-                        r.bold = run.bold
-                        r.italic = run.italic
-                        r.underline = run.underline
-                        r.font.size = run.font.size
-                        if run.font.color.rgb:
-                            r.font.color.rgb = run.font.color.rgb
-            except Exception as e:
-                print("❌ Footer parsing failed:", str(e))
+            for para in temp_doc.paragraphs:
+                footer_para = section.footer.add_paragraph()
+                for run in para.runs:
+                    new_run = footer_para.add_run(run.text)
+                    new_run.bold = run.bold
+                    new_run.italic = run.italic
+                    new_run.underline = run.underline
+                    new_run.font.size = run.font.size
+                    if run.font.color and run.font.color.rgb:
+                        new_run.font.color.rgb = run.font.color.rgb
 
         # ✅ Add main letter content
         for line in content.split("\n"):
@@ -84,7 +79,6 @@ async def merge_docx(request: Request):
                 para = doc.add_paragraph(line.strip())
                 para.style.font.size = Pt(11)
 
-        # ✅ Export
         output = io.BytesIO()
         doc.save(output)
         output.seek(0)
