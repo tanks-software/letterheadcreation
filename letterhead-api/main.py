@@ -51,23 +51,9 @@ async def merge_docx(request: Request):
     header_para.alignment = 1
     header_para.add_run().add_picture(header_stream, width=Inches(6.5))
 
-    # Add styled HTML footer via html2docx
+    # Add styled HTML footer
     if footer_html.strip():
-        # Write HTML into a temporary doc
-        footer_doc = Document()
-        html2docx(f"<html><body>{footer_html}</body></html>", footer_doc)
-
-        # Add a new paragraph to the real footer
-        footer_section = section.footer
-        for temp_para in footer_doc.paragraphs:
-            para = footer_section.add_paragraph()
-            for run in temp_para.runs:
-                new_run = para.add_run(run.text)
-                new_run.bold = run.bold
-                new_run.italic = run.italic
-                new_run.underline = run.underline
-                new_run.font.size = run.font.size
-                new_run.font.color.rgb = run.font.color.rgb
+        html2docx(footer_html, doc=doc, append_to=section.footer)
 
     # Add main body content
     for line in content.split("\n"):
@@ -85,3 +71,4 @@ async def merge_docx(request: Request):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": "attachment; filename=letterhead_final.docx"}
     )
+
