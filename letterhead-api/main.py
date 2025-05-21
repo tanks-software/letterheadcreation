@@ -59,7 +59,7 @@ async def merge_docx(request: Request):
         # ✅ Parse and apply footer
         if footer_html.strip():
             try:
-                parser = Html2Docx()
+                parser = html2docx()
                 parser.feed(f"<html><body>{footer_html}</body></html>")
                 parser.close()
 
