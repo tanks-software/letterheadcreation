@@ -86,6 +86,12 @@ const CanvasEditor = () => {
           footer_text: footerText
         })
       });
+      if (!response.ok) {
+        const err = await response.text(); // log backend error
+        console.error("❌ Server returned:", err);
+        alert("Export failed: " + err);
+        return;
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
